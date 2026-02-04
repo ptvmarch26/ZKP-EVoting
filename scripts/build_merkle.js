@@ -1,12 +1,17 @@
 const fs = require("fs");
 const path = require("path");
-const { ethers } = require("ethers");
+const hre = require("hardhat");
 const { buildPoseidon } = require("circomlibjs");
 
 const merkleUtils = require("../utils/merkleUtils");
-const { contract } = require("../configs/blockchain");
 
-// ===== CONFIG =====
+const { ethers } = hre;
+
+// // ===== CONFIG =====
+// const CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; // 👈 dán address deploy vào đây
+
+const {getContract} = require("../configs/blockchain");
+
 const VOTER_DB_FILE = path.join(
   __dirname,
   "../data/voter_data_for_db_10.json"
@@ -21,6 +26,15 @@ const END_DATE = START_DATE + 7 * 24 * 3600;
 async function buildMerkleAndPublish() {
   console.time("⏱ build_merkle");
 
+  // ✅ DÙNG CHUNG SIGNER VỚI DEPLOY
+  // const [signer] = await ethers.getSigners();
+
+  // const contract = new ethers.Contract(
+  //   CONTRACT_ADDRESS,
+  //   require("../artifacts/contracts/E_Voting.sol/E_Voting.json").abi,
+  //   signer
+  // );
+  const { contract, signer } = await getContract();
   // 1️⃣ Load voter DB
   const voters = JSON.parse(fs.readFileSync(VOTER_DB_FILE, "utf8"));
   if (!voters.length) throw new Error("No voters found");
@@ -37,7 +51,7 @@ async function buildMerkleAndPublish() {
 
   console.log("🌳 Merkle root:", root.toString());
 
-  // 3️⃣ Generate Merkle proofs & write BACK to voter_data_for_db
+  // 3️⃣ Generate Merkle proofs
   voters.forEach((voter, index) => {
     const { pathElements, pathIndices } =
       merkleUtils.getMerkleProof(tree, index);
@@ -49,7 +63,7 @@ async function buildMerkleAndPublish() {
   });
 
   fs.writeFileSync(VOTER_DB_FILE, JSON.stringify(voters, null, 2));
-  console.log("💾 Merkle proofs saved into voter_data_for_db");
+  console.log("💾 Merkle proofs saved");
 
   // 4️⃣ Publish election info
   console.log("📤 Publishing election info...");
@@ -70,11 +84,9 @@ async function buildMerkleAndPublish() {
   );
 
   const txRoot = await contract.setMerkleRoot(rootHex);
-  const receipt = await txRoot.wait();
+  await txRoot.wait();
 
   console.log("✅ Merkle root published");
-  console.log("TX:", receipt.hash);
-
   console.timeEnd("⏱ build_merkle");
 }
 
