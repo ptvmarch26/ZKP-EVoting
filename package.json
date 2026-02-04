@@ -1,0 +1,19 @@
+{
+  "name": "zkp_evoting",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test scripts/build_merkle.js --network localhost"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.28.4"
+  },
+  "dependencies": {
+    "@noble/secp256k1": "^3.0.0",
+    "circomlibjs": "^0.1.7"
+  }
+}

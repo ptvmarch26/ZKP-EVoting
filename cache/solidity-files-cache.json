@@ -1,0 +1,153 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/phithong/zk-voting/zkp-EVoting/contracts/E_Voting.sol": {
+      "lastModificationDate": 1770043219126,
+      "contentHash": "3dc69cd414b433101e611aa9b849b2ea",
+      "sourceName": "contracts/E_Voting.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./ParticialDecriptionVerifier.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "E_Voting"
+      ]
+    },
+    "/home/phithong/zk-voting/zkp-EVoting/contracts/ParticialDecriptionVerifier.sol": {
+      "lastModificationDate": 1770042048608,
+      "contentHash": "9d80d9b10d18073dcb155b527277255b",
+      "sourceName": "contracts/ParticialDecriptionVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.0 <0.9.0"
+      ],
+      "artifacts": [
+        "ParticialDecriptionVerifier"
+      ]
+    },
+    "/home/phithong/zk-voting/zkp-EVoting/contracts/TallyValidityVerifier.sol": {
+      "lastModificationDate": 1770043229233,
+      "contentHash": "7a154db003c39e0aae947282b4b314a0",
+      "sourceName": "contracts/TallyValidityVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.0 <0.9.0"
+      ],
+      "artifacts": [
+        "TallyValidityVerifier"
+      ]
+    },
+    "/home/phithong/zk-voting/zkp-EVoting/contracts/TallyVerifier.sol": {
+      "lastModificationDate": 1770040313483,
+      "contentHash": "12cc3e704c3c5dd7a71e90a158c80e3b",
+      "sourceName": "contracts/TallyVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./TallyValidityVerifier.sol"
+      ],
+      "versionPragmas": [
+        ">=0.7.0 <0.9.0"
+      ],
+      "artifacts": [
+        "TallyVerifierOnChain"
+      ]
+    }
+  }
+}
