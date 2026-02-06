@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "register": "npx hardhat test scripts/register.js --network localhost",
+    "register": "npx hardhat run scripts/register.js --network localhost",
     "vote": "npx hardhat run scripts/vote.js --network localhost",
     "aggregate": "npx hardhat run scripts/aggregate.js --network localhost",
+    "partial": "npx hardhat run scripts/partial.js --network localhost",
     "tally": "npx hardhat run scripts/tally.js --network localhost"
   },
   "author": "",

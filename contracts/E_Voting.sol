@@ -191,6 +191,20 @@ function verifyPartialProof(
     return ok;
 }
 
+// function verifyPartialProof(
+//     uint[2] calldata pA,
+//     uint[2][2] calldata pB,
+//     uint[2] calldata pC,
+//     uint[1] calldata pubSignals // Sửa từ [1] thành [6] nếu mạch có 6 public inputs
+// ) external onlyTrustee {
+//     bool ok = _safeVerifyPartialProof(pA, pB, pC, pubSignals);
+    
+//     require(ok, "Invalid ZK Proof"); // Thêm dòng này
+
+//     lastVerifyPassed[msg.sender] = true;
+//     emit PartialDecryptionVerified(msg.sender);
+// }
+
 function _safeVerifyPartialProof(
     uint[2] memory pA,
     uint[2][2] memory pB,

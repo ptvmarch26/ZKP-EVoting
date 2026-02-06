@@ -114,7 +114,7 @@ function parseArgs() {
   const circuits = process.argv.slice(2);
   if (circuits.length === 0) {
     // default theo repo bạn
-    circuits.push("TallyValidity");
+    circuits.push("PartialDecryption");
   }
 
   return { circuitsDir, buildRoot, ptauPath, circuits };

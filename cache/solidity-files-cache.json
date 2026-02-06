@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/phithong/zk-voting/zkp-EVoting/contracts/E_Voting.sol": {
-      "lastModificationDate": 1770043219126,
-      "contentHash": "3dc69cd414b433101e611aa9b849b2ea",
+      "lastModificationDate": 1770387256673,
+      "contentHash": "8a5a9ac69410ee78d7dbaa6b88455032",
       "sourceName": "contracts/E_Voting.sol",
       "solcConfig": {
         "version": "0.8.20",
