@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx hardhat test scripts/build_merkle.js"
+    "register": "npx hardhat test scripts/register.js --network localhost",
+    "vote": "npx hardhat run scripts/vote.js --network localhost",
+    "aggregate": "npx hardhat run scripts/aggregate.js --network localhost",
+    "tally": "npx hardhat run scripts/tally.js --network localhost"
   },
   "author": "",
   "license": "ISC",
@@ -14,6 +17,8 @@
   },
   "dependencies": {
     "@noble/secp256k1": "^3.0.0",
-    "circomlibjs": "^0.1.7"
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.6"
   }
 }

@@ -16,6 +16,14 @@ async function main() {
 
   console.log("✅ E_Voting deployed to:");
   console.log("   ", await evoting.getAddress());
+
+  const Tally = await hre.ethers.getContractFactory("TallyVerifierOnChain");
+  const tally = await Tally.deploy();
+
+  await tally.waitForDeployment();
+
+  console.log("✅ Tally deployed to:");
+  console.log("   ", await tally.getAddress());
 }
 
 main().catch((error) => {

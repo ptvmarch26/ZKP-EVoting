@@ -75,4 +75,4 @@ template VotingCircuit(depth, nCandidates) {
 // ======================================================
 // Main instance
 // ======================================================
-component main = VotingCircuit(17, 10);
+component main = VotingCircuit(4, 2);
