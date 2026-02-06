@@ -1,8 +1,8 @@
 const hre = require("hardhat");
 
 // ===== CONTRACT ADDRESSES =====
-const VOTING_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const TALLY_VERIFIER_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; 
+const VOTING_ADDRESS = "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf";
+const TALLY_VERIFIER_ADDRESS = "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"; 
 // 👆 đổi đúng address TallyValidityVerifier của bạn
 
 async function getContract(signerIndex = 0) {

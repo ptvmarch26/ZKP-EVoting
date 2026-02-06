@@ -172,38 +172,37 @@ function registerTrustees(address[3] calldata _trustees) external onlyAdmin {
 mapping(address => bool) public lastVerifyPassed;
 event PartialDecryptionFailed(address trustee);
 
+// function verifyPartialProof(
+//     uint[2] calldata pA,
+//     uint[2][2] calldata pB,
+//     uint[2] calldata pC,
+//     uint[1] calldata pubSignals
+// ) external onlyTrustee returns (bool) {
+
+//     bool ok = _safeVerifyPartialProof(pA, pB, pC, pubSignals); // dùng wrapper
+
+//     if (ok) {
+//         lastVerifyPassed[msg.sender] = true;
+//         emit PartialDecryptionVerified(msg.sender);
+//     } else {
+//         emit PartialDecryptionFailed(msg.sender);
+//     }
+
+//     return ok;
+// }
+
 function verifyPartialProof(
     uint[2] calldata pA,
     uint[2][2] calldata pB,
     uint[2] calldata pC,
     uint[1] calldata pubSignals
-) external onlyTrustee returns (bool) {
-
-    bool ok = _safeVerifyPartialProof(pA, pB, pC, pubSignals); // dùng wrapper
-
-    if (ok) {
-        lastVerifyPassed[msg.sender] = true;
-        emit PartialDecryptionVerified(msg.sender);
-    } else {
-        emit PartialDecryptionFailed(msg.sender);
-    }
-
-    return ok;
+) external onlyTrustee {
+    bool ok = _safeVerifyPartialProof(pA, pB, pC, pubSignals);
+    require(ok, "Invalid ZK Proof");   // quan trọng
+    lastVerifyPassed[msg.sender] = true;
+    emit PartialDecryptionVerified(msg.sender);
 }
 
-// function verifyPartialProof(
-//     uint[2] calldata pA,
-//     uint[2][2] calldata pB,
-//     uint[2] calldata pC,
-//     uint[1] calldata pubSignals // Sửa từ [1] thành [6] nếu mạch có 6 public inputs
-// ) external onlyTrustee {
-//     bool ok = _safeVerifyPartialProof(pA, pB, pC, pubSignals);
-    
-//     require(ok, "Invalid ZK Proof"); // Thêm dòng này
-
-//     lastVerifyPassed[msg.sender] = true;
-//     emit PartialDecryptionVerified(msg.sender);
-// }
 
 function _safeVerifyPartialProof(
     uint[2] memory pA,

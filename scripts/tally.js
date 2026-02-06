@@ -1,186 +1,3 @@
-// /* eslint-disable no-console */
-// const fs = require("fs");
-// const path = require("path");
-// const { groth16 } = require("snarkjs");
-// const { buildBabyjub } = require("circomlibjs");
-// const { getContract } = require("../configs/blockchain");
-
-// // =======================================================
-// // CONFIG
-// // =======================================================
-// const AGGREGATOR_INDEX = 1; // signer đã set làm aggregator
-// const SECRET_KEY = BigInt(
-//   "1777057593178280414545006270989564043545364506684196906421583838431977886106"
-// );
-
-// const START_BLOCK = 1;
-// const END_BLOCK = "latest";
-
-// // =======================================================
-// // Discrete log (demo, small tally)
-// // =======================================================
-// function findDiscreteLog(M, G, F, babyjub, maxTries = 100000) {
-//   const identity = [F.e(0n), F.e(1n)];
-//   if (
-//     F.toObject(M[0]) === F.toObject(identity[0]) &&
-//     F.toObject(M[1]) === F.toObject(identity[1])
-//   )
-//     return 0;
-
-//   let cur = G;
-//   for (let i = 1; i <= maxTries; i++) {
-//     if (
-//       F.toObject(cur[0]) === F.toObject(M[0]) &&
-//       F.toObject(cur[1]) === F.toObject(M[1])
-//     )
-//       return i;
-//     cur = babyjub.addPoint(cur, G);
-//   }
-//   return null;
-// }
-
-// // =======================================================
-// // MAIN
-// // =======================================================
-// async function main() {
-//   const babyjub = await buildBabyjub();
-//   const F = babyjub.F;
-//   const G = babyjub.Base8;
-
-//   const { votingContract, tallyVerifierContract } =
-//     await getContract(AGGREGATOR_INDEX);
-
-//   console.log("🔗 Voting contract:", await votingContract.getAddress());
-//   console.log("🔗 Tally contract:", await tallyVerifierContract.getAddress());
-
-//   // ===================================================
-//   // 1️⃣ Read CipherTotalPublished
-//   // ===================================================
-//   const latestBlock =
-//     END_BLOCK === "latest"
-//       ? await votingContract.runner.provider.getBlockNumber()
-//       : END_BLOCK;
-
-//   const events = await votingContract.queryFilter(
-//     "CipherTotalPublished",
-//     START_BLOCK,
-//     latestBlock
-//   );
-
-//   if (events.length === 0) {
-//     console.log("⚠️ No CipherTotalPublished events");
-//     return;
-//   }
-
-//   const C1x = [],
-//     C1y = [],
-//     C2x = [],
-//     C2y = [];
-
-//   for (const e of events) {
-//     C1x.push(e.args.C1_total[0].toString());
-//     C1y.push(e.args.C1_total[1].toString());
-//     C2x.push(e.args.C2_total[0].toString());
-//     C2y.push(e.args.C2_total[1].toString());
-//   }
-
-//   const nCandidates = C1x.length;
-//   console.log(`📊 Candidates: ${nCandidates}`);
-
-//   // ===================================================
-//   // 2️⃣ Decrypt (NO threshold)
-//   // ===================================================
-//   const tallyInput = {
-//     C1_total_x: C1x,
-//     C1_total_y: C1y,
-//     C2_total_x: C2x,
-//     C2_total_y: C2y,
-//     sk: SECRET_KEY.toString(),
-//     Mx: [],
-//     My: [],
-//   };
-
-//   for (let i = 0; i < nCandidates; i++) {
-//     const C1 = [F.e(BigInt(C1x[i])), F.e(BigInt(C1y[i]))];
-//     const C2 = [F.e(BigInt(C2x[i])), F.e(BigInt(C2y[i]))];
-
-//     const skC1 = babyjub.mulPointEscalar(C1, SECRET_KEY);
-//     const neg = [F.neg(skC1[0]), skC1[1]];
-//     const M = babyjub.addPoint(C2, neg);
-
-//     const votes = findDiscreteLog(M, G, F, babyjub);
-
-//     tallyInput.Mx.push(F.toObject(M[0]).toString());
-//     tallyInput.My.push(F.toObject(M[1]).toString());
-
-//     console.log(`🧮 Candidate ${i + 1}: ${votes} votes`);
-//   }
-
-//   // ===================================================
-//   // 3️⃣ Prove TallyValidity
-//   // ===================================================
-//   const wasmPath = path.join(
-//     __dirname,
-//     "../circuits/build/TallyValidity/TallyValidity_js/TallyValidity.wasm"
-//   );
-//   const zkeyPath = path.join(
-//     __dirname,
-//     "../circuits/build/TallyValidity/TallyValidity.zkey"
-//   );
-
-//   console.time("⏱ tally-proof");
-//   const { proof, publicSignals } = await groth16.fullProve(
-//     tallyInput,
-//     wasmPath,
-//     zkeyPath
-//   );
-//   console.timeEnd("⏱ tally-proof");
-
-//   // ===================================================
-//   // 4️⃣ Export calldata & submit ON-CHAIN ONLY
-//   // ===================================================
-//   const calldata = await groth16.exportSolidityCallData(
-//     proof,
-//     publicSignals
-//   );
-
-//   const argv = calldata
-//     .replace(/["[\]\s]/g, "")
-//     .split(",")
-//     .map(BigInt);
-
-//   const a = [argv[0].toString(), argv[1].toString()];
-//   const b = [
-//     [argv[2].toString(), argv[3].toString()],
-//     [argv[4].toString(), argv[5].toString()],
-//   ];
-//   const c = [argv[6].toString(), argv[7].toString()];
-//   const inputSignals = [publicSignals[0].toString()];
-
-//   console.log("🚀 Benchmark submitTallyProof (100 rounds)");
-
-//   const times = [];
-//   for (let i = 1; i <= 1; i++) {
-//     const t0 = Date.now();
-//     const tx = await tallyVerifierContract.submitTallyProof(
-//       a,
-//       b,
-//       c,
-//       inputSignals
-//     );
-//     await tx.wait();
-//     const t = (Date.now() - t0) / 1000;
-//     times.push(t);
-//     console.log(`🏁 Round ${i}: ${t.toFixed(3)}s`);
-//   }
-
-//   const avg = times.reduce((a, b) => a + b, 0) / times.length;
-//   console.log(`📊 Avg submit time: ${avg.toFixed(3)}s`);
-// }
-
-// main().catch(console.error);
-
-
 /* eslint-disable no-console */
 const fs = require("fs");
 const path = require("path");
@@ -190,94 +7,295 @@ const { ethers } = require("hardhat");
 const { getContract } = require("../configs/blockchain");
 
 // ===================== CONFIG =====================
-// Trustee index: 0 (Admin), 2 (Trustee 1), 3 (Trustee 2) tùy bạn chọn
-const TRUSTEE_INDEX = 2; 
-const KEY_FILE = path.join(__dirname, "../data/dkgKeys/Trustee_1.json"); // Load private share
+// nếu bạn đã tách contract tally riêng thì bật USE_TALLY_CONTRACT = true
+const USE_TALLY_CONTRACT = true;
 
-const WASM_PATH = path.join(__dirname, "../circuits/build/PartialDecryption_js/PartialDecryption.wasm");
-const ZKEY_PATH = path.join(__dirname, "../circuits/build/PartialDecryption.zkey");
+// Benchmark
+const ENABLE_BENCHMARK = false;
+const ROUNDS = 100;
 
-async function main() {
-    const babyjub = await buildBabyjub();
-    const { F, Base8: G } = babyjub;
+// Block scan
+const LOOKBACK_BLOCKS = 3000;
+const CHUNK_SIZE = 50;
 
-    // 1️⃣ Kết nối Contract với tư cách Trustee
-    const { votingContract, signer } = await getContract(TRUSTEE_INDEX);
-    console.log(`📌 Acting as Trustee: ${await signer.getAddress()}`);
+// Circuit paths (đổi theo project của bạn)
+const TALLY_INPUT_PATH = path.join(__dirname, "../circuits/inputs/tally_input.json");
+const TALLY_WASM_PATH = path.join(__dirname, "../circuits/build/TallyValidity/TallyValidity_js/TallyValidity.wasm");
+const TALLY_ZKEY_PATH = path.join(__dirname, "../circuits/build/TallyValidity/TallyValidity.zkey");
+const TALLY_VKEY_PATH = path.join(__dirname, "../circuits/build/TallyValidity/TallyValidity_vkey.json");
 
-    // 2️⃣ Lấy dữ liệu C1_total từ sự kiện CipherTotalPublished trên Chain
-    console.log("📡 Fetching aggregated C1 points from blockchain...");
-    const filter = votingContract.filters.CipherTotalPublished();
-    const events = await votingContract.queryFilter(filter, -1000); // Scan 1000 block gần nhất
-    
-    if (events.length === 0) throw new Error("❌ Không tìm thấy CipherTotalPublished. Aggregator chưa nộp kết quả tổng?");
+// nếu trustee ID không đọc on-chain thì set cứng 2 trustee đầu
+const FALLBACK_ID1 = 1n;
+const FALLBACK_ID2 = 2n;
 
-    // Sắp xếp theo candidateId
-    const sortedEvents = events.sort((a, b) => a.args.candidateId - b.args.candidateId);
-    const C1_list = sortedEvents.map(e => ({
-        x: e.args.C1_total[0].toString(),
-        y: e.args.C1_total[1].toString()
-    }));
-
-    // 3️⃣ Load Secret Share từ file local
-    const keyData = JSON.parse(fs.readFileSync(KEY_FILE, "utf8"));
-    const si = BigInt(keyData.share);
-    const PKi = keyData.pk_share;
-
-    console.log(`🧮 Calculating ${C1_list.length} partial decryption points...`);
-    const D_points = [];
-    const witnessInputs = [];
-
-    for (let i = 0; i < C1_list.length; i++) {
-        const C1 = [F.e(BigInt(C1_list[i].x)), F.e(BigInt(C1_list[i].y))];
-        
-        // Tính Di = si * C1
-        const Di = babyjub.mulPointEscalar(C1, si);
-        const Dix = F.toObject(Di[0]).toString();
-        const Diy = F.toObject(Di[1]).toString();
-
-        D_points.push([Dix, Diy]);
-
-        // Chuẩn bị input cho mạch (Giả sử mạch của bạn verify từng cặp hoặc mảng)
-        // Đây là ví dụ cho mạch verify 1 cặp. Nếu mạch của bạn nhận mảng, hãy điều chỉnh cấu trúc.
-        witnessInputs.push({
-            s_i: si.toString(),
-            C1x: C1_list[i].x,
-            C1y: C1_list[i].y,
-            D_ix: Dix,
-            D_iy: Diy,
-            PKx: PKi.x,
-            PKy: PKi.y
-        });
-    }
-
-    // 4️⃣ Sinh ZK Proof (Ví dụ verify cho ứng cử viên đầu tiên - chỉnh theo mạch của bạn)
-    console.log("🧩 Generating ZK Proof for Partial Decryption...");
-    // Lưu ý: Nếu mạch bạn hỗ trợ mảng, hãy truyền cả mảng vào witnessInputs
-    const { proof, publicSignals } = await groth16.fullProve(witnessInputs[0], WASM_PATH, ZKEY_PATH);
-
-    const calldata = await groth16.exportSolidityCallData(proof, publicSignals);
-    const argv = calldata.replace(/["[\]\s]/g, "").split(",").map(x => BigInt(x).toString());
-
-    const a = [argv[0], argv[1]];
-    const b = [[argv[2], argv[3]], [argv[4], argv[5]]];
-    const c = [argv[6], argv[7]];
-    const inputSignals = argv.slice(8);
-
-    // 5️⃣ Transaction 1: Verify Proof
-    console.log("⛓️ Sending verifyPartialProof transaction...");
-    const txVerify = await votingContract.verifyPartialProof(a, b, c, inputSignals);
-    await txVerify.wait();
-    console.log("✅ Proof verified on-chain!");
-
-    // 6️⃣ Transaction 2: Publish D_points
-    console.log("⛓️ Sending publishPartialDecryption transaction...");
-    const txPub = await votingContract.publishPartialDecryption(D_points);
-    const receipt = await txPub.wait();
-
-    console.log(`🎉 Trustee process done! Block: ${receipt.blockNumber}`);
-    const currentCount = await votingContract.thresholdCount();
-    console.log(`🔢 Current thresholdCount: ${currentCount.toString()}`);
+// ===================== MATH UTILS =====================
+function modInverse(a, m) {
+  a = ((a % m) + m) % m;
+  let [r0, r1] = [a, m];
+  let [s0, s1] = [1n, 0n];
+  while (r1 !== 0n) {
+    const q = r0 / r1;
+    [r0, r1] = [r1, r0 - q * r1];
+    [s0, s1] = [s1, s0 - q * s1];
+  }
+  if (r0 !== 1n) throw new Error("Không tồn tại nghịch đảo modulo");
+  return ((s0 % m) + m) % m;
 }
 
-main().catch(console.error);
+function findDiscreteLog(Mpoint, G, F, babyjub, maxTries = 60000) {
+  const identity = [F.e(0n), F.e(1n)];
+  if (
+    F.toObject(Mpoint[0]) === F.toObject(identity[0]) &&
+    F.toObject(Mpoint[1]) === F.toObject(identity[1])
+  ) return 0;
+
+  let test = G;
+  for (let m = 1; m <= maxTries; m++) {
+    if (
+      F.toObject(Mpoint[0]) === F.toObject(test[0]) &&
+      F.toObject(Mpoint[1]) === F.toObject(test[1])
+    ) return m;
+    test = babyjub.addPoint(test, G);
+  }
+  return null;
+}
+
+function parseErr(e) {
+  return (
+    e?.shortMessage ||
+    e?.reason ||
+    e?.error?.message ||
+    e?.data?.message ||
+    e?.message ||
+    "Unknown error"
+  );
+}
+
+async function getEventsChunked(contract, eventFilter, startBlock, endBlock, step = 50) {
+  const events = [];
+  for (let from = startBlock; from <= endBlock; from += step) {
+    const to = Math.min(from + step - 1, endBlock);
+    try {
+      const chunk = await contract.queryFilter(eventFilter, from, to);
+      events.push(...chunk);
+    } catch (err) {
+      console.error(`⚠️ Error fetching [${from}-${to}]:`, parseErr(err));
+    }
+  }
+  return events;
+}
+
+async function main() {
+  try {
+    const babyjub = await buildBabyjub();
+    const F = babyjub.F;
+    const G = babyjub.Base8;
+    const n = babyjub.subOrder;
+
+    // signer index 0 cho hardhat local
+    const { signer, votingContract, tallyVerifierContract } = await getContract(0);
+    const signerAddr = await signer.getAddress();
+
+    const reader = votingContract; // dữ liệu tally/events nằm ở voting
+    const submitter = USE_TALLY_CONTRACT ? tallyVerifierContract : votingContract;
+
+    console.log("🔗 Signer:", signerAddr);
+    console.log("🔗 Voting:", reader.target ?? reader.address);
+    console.log("🔗 Submitter:", submitter.target ?? submitter.address);
+
+    // 1) Scan events
+    const latest = await ethers.provider.getBlockNumber();
+    const start = Math.max(0, latest - LOOKBACK_BLOCKS);
+    console.log(`📡 Scanning blocks ${start} -> ${latest}`);
+
+    const cipherFilter = reader.filters.CipherTotalPublished();
+    const partialFilter = reader.filters.PartialDecryptionSubmitted();
+
+    const cipherEvents = await getEventsChunked(reader, cipherFilter, start, latest, CHUNK_SIZE);
+    const partialEvents = await getEventsChunked(reader, partialFilter, start, latest, CHUNK_SIZE);
+
+    if (!cipherEvents.length) throw new Error("❌ Không có CipherTotalPublished");
+    if (partialEvents.length < 2) throw new Error("❌ Cần ít nhất 2 PartialDecryptionSubmitted");
+
+    console.log(`✅ CipherTotalPublished: ${cipherEvents.length}`);
+    console.log(`✅ PartialDecryptionSubmitted: ${partialEvents.length}`);
+
+    // 2) Parse C totals (sort theo candidateId)
+    const sortedCipher = [...cipherEvents].sort(
+      (a, b) => Number(a.args.candidateId) - Number(b.args.candidateId)
+    );
+
+    const C2_total_x = [];
+    const C2_total_y = [];
+    for (const e of sortedCipher) {
+      C2_total_x.push(e.args.C2_total[0].toString());
+      C2_total_y.push(e.args.C2_total[1].toString());
+    }
+
+    // 3) Lấy partial decryptions theo trustee (event mới nhất mỗi trustee)
+    const trusteeDecryptions = {};
+    for (const e of partialEvents) {
+      const trustee = e.args.trustee.toLowerCase();
+      const D_points = e.args.D_points.map((pair) => [pair[0].toString(), pair[1].toString()]);
+      trusteeDecryptions[trustee] = D_points; // overwrite -> giữ bản mới nhất
+    }
+
+    const trustees = Object.keys(trusteeDecryptions);
+    if (trustees.length < 2) throw new Error("❌ Không đủ trustee decryptions");
+
+    const T1 = trustees[0];
+    const T2 = trustees[1];
+
+    // thử đọc trusteeID on-chain, fail thì fallback 1/2
+    let ID1 = FALLBACK_ID1;
+    let ID2 = FALLBACK_ID2;
+    try {
+      const id1 = await reader.trusteeID(T1);
+      const id2 = await reader.trusteeID(T2);
+      if (BigInt(id1.toString()) > 0n && BigInt(id2.toString()) > 0n) {
+        ID1 = BigInt(id1.toString());
+        ID2 = BigInt(id2.toString());
+      }
+    } catch (_) {}
+
+    const lambda1 = (((-ID2 * modInverse(ID1 - ID2, n)) % n) + n) % n;
+    const lambda2 = (((-ID1 * modInverse(ID2 - ID1, n)) % n) + n) % n;
+
+    console.log(`👥 Trustees: ${T1} (ID=${ID1}), ${T2} (ID=${ID2})`);
+    console.log(`📏 Lagrange: λ1=${lambda1}, λ2=${lambda2}`);
+
+    // check số candidate khớp với D_points
+    const nCandidates = C2_total_x.length;
+    if (
+      trusteeDecryptions[T1].length < nCandidates ||
+      trusteeDecryptions[T2].length < nCandidates
+    ) {
+      throw new Error("❌ Số D_points không khớp số candidate");
+    }
+
+    // 4) Decrypt tally + build input object for circuit
+    console.time("⏱️ Tally decryption");
+    const finalResults = [];
+    const inputObject = {
+      C2_total_x: [],
+      C2_total_y: [],
+      D_x: [],
+      D_y: [],
+      lambda: [lambda1.toString(), lambda2.toString()],
+      Mx: [],
+      My: [],
+    };
+
+    for (let i = 0; i < nCandidates; i++) {
+      const C2 = [F.e(BigInt(C2_total_x[i])), F.e(BigInt(C2_total_y[i]))];
+
+      const D1 = trusteeDecryptions[T1][i].map((v) => F.e(BigInt(v)));
+      const D2 = trusteeDecryptions[T2][i].map((v) => F.e(BigInt(v)));
+
+      const D1s = babyjub.mulPointEscalar(D1, lambda1);
+      const D2s = babyjub.mulPointEscalar(D2, lambda2);
+      const sumD = babyjub.addPoint(D1s, D2s);
+
+      const negSumD = [F.neg(sumD[0]), sumD[1]];
+      const M = babyjub.addPoint(C2, negSumD);
+
+      const votes = findDiscreteLog(M, G, F, babyjub, 60000);
+
+      finalResults.push({
+        candidateId: i + 1,
+        Mx: F.toObject(M[0]).toString(),
+        My: F.toObject(M[1]).toString(),
+        votes: votes ?? "unknown",
+      });
+
+      inputObject.C2_total_x.push(C2_total_x[i]);
+      inputObject.C2_total_y.push(C2_total_y[i]);
+      inputObject.D_x.push([trusteeDecryptions[T1][i][0], trusteeDecryptions[T2][i][0]]);
+      inputObject.D_y.push([trusteeDecryptions[T1][i][1], trusteeDecryptions[T2][i][1]]);
+      inputObject.Mx.push(F.toObject(M[0]).toString());
+      inputObject.My.push(F.toObject(M[1]).toString());
+    }
+    console.timeEnd("⏱️ Tally decryption");
+
+    console.log("🎯 Final results:", finalResults);
+
+    // 5) Save tally input
+    fs.mkdirSync(path.dirname(TALLY_INPUT_PATH), { recursive: true });
+    fs.writeFileSync(TALLY_INPUT_PATH, JSON.stringify(inputObject, null, 2));
+    console.log(`🧾 Saved tally input: ${TALLY_INPUT_PATH}`);
+
+    // 6) Generate proof TallyValidity
+    console.time("⏱️ Tally proof generation");
+    const input = JSON.parse(fs.readFileSync(TALLY_INPUT_PATH, "utf8"));
+    const { proof, publicSignals } = await groth16.fullProve(
+      input,
+      TALLY_WASM_PATH,
+      TALLY_ZKEY_PATH
+    );
+    console.timeEnd("⏱️ Tally proof generation");
+
+    // 7) Verify off-chain
+    const vKey = JSON.parse(fs.readFileSync(TALLY_VKEY_PATH, "utf8"));
+    const okOff = await groth16.verify(vKey, publicSignals, proof);
+    if (!okOff) throw new Error("❌ Tally proof off-chain verify FAILED");
+    console.log("✅ Tally proof off-chain verify PASSED");
+
+    // 8) Format calldata
+    const calldata = await groth16.exportSolidityCallData(proof, publicSignals);
+    const argv = calldata.replace(/["[\]\s]/g, "").split(",").map((x) => BigInt(x).toString());
+
+    const a = [argv[0], argv[1]];
+    const b = [
+      [argv[2], argv[3]],
+      [argv[4], argv[5]],
+    ];
+    const c = [argv[6], argv[7]];
+    const inputSignals = argv.slice(8); // dùng full signals, không cắt [0]
+
+    console.log("📌 publicSignals length:", publicSignals.length);
+    console.log("📌 inputSignals length:", inputSignals.length);
+
+    // 9) Preflight on-chain static call
+    try {
+      const okStatic = await submitter.submitTallyProof.staticCall(a, b, c, inputSignals);
+      console.log("🧪 submitTallyProof.staticCall:", okStatic);
+    } catch (e) {
+      console.log("⚠️ staticCall reverted:", parseErr(e));
+      throw e;
+    }
+
+    // 10) Send tx (1 lần hoặc benchmark)
+    if (!ENABLE_BENCHMARK) {
+      const tx = await submitter.submitTallyProof(a, b, c, inputSignals);
+      const rc = await tx.wait();
+      console.log(`✅ submitTallyProof tx: ${tx.hash} status=${rc?.status}`);
+      return;
+    }
+
+    console.log(`🚀 Benchmark ${ROUNDS} rounds submitTallyProof...`);
+    const times = [];
+    for (let i = 1; i <= ROUNDS; i++) {
+      const t0 = Date.now();
+      const tx = await submitter.submitTallyProof(a, b, c, inputSignals);
+      await tx.wait();
+      const t1 = Date.now();
+      const sec = (t1 - t0) / 1000;
+      times.push(sec);
+      console.log(`🏁 Round ${i}/${ROUNDS}: ${sec.toFixed(3)} s`);
+    }
+
+    const avg = times.reduce((s, x) => s + x, 0) / times.length;
+    const variance = times.reduce((s, x) => s + (x - avg) ** 2, 0) / times.length;
+    const stdDev = Math.sqrt(variance);
+
+    console.log("\n📊 Benchmark Summary:");
+    console.log(`   Avg: ${avg.toFixed(3)} s`);
+    console.log(`   Std: ${stdDev.toFixed(3)} s`);
+  } catch (err) {
+    console.error("❌ Error:", parseErr(err));
+    if (err?.stack) console.error(err.stack);
+    process.exit(1);
+  }
+}
+
+main();
